@@ -4,7 +4,7 @@ Built from the operating spec and expanded to cover how the team should collabor
 
 ## 1) Primary role interaction matrix
 
-Legend:
+### Legend:
 **A** = Accountable / final owner  
 **R** = Responsible / does the work  
 **C** = Consulted / gives input before decision  
