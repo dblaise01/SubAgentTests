@@ -1,0 +1,23 @@
+.github/
+  prompts/
+    pr-changes.prompt.md
+    pr-needs-attention.prompt.md
+
+.vscode/
+  agents/
+    pr-controller.agent.md
+    azure-devops-mcp-caller.agent.md
+    pr-change-analyzer.agent.md
+    pr-triage.agent.md
+    pr-report-writer.agent.md
+
+reports/
+  prs/
+    latest/
+    history/
+
+schemas/
+  pr-snapshot.schema.json
+
+docs/
+  pr-agent-team.md
