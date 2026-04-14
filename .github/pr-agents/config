@@ -11,10 +11,14 @@
     pr-triage.agent.md
     pr-report-writer.agent.md
 
-reports/
-  prs/
+.github/pr-snapshots/
+  <project-key>/
     latest/
+      username@company.com.json
     history/
+      username@company.com/
+        2026-04-14T11-32-10.json
+        2026-04-15T09-05-44.json
 
 schemas/
   pr-snapshot.schema.json
