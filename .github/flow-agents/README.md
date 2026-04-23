@@ -1,7 +1,10 @@
 # Call Flow Agent System
 
 ## Overview
-The Call Flow Agent System is a controller-based architecture that analyzes code execution paths and generates Mermaid diagrams.
+The Call Flow Agent System is a controller-based architecture that analyzes code execution paths and can produce:
+- Mermaid diagrams
+- Narrative walkthroughs
+- Combined diagram + narrative documentation
 
 It is designed for:
 - Debugging complex flows
@@ -18,9 +21,9 @@ The system uses a single controller (**Flow Organizer**) and multiple focused su
 ### Controller
 **Flow Organizer**
 - Entry point for all requests
-- Determines diagram type and scope
+- Determines output mode, diagram type, and scope
 - Coordinates subagents
-- Produces final Markdown + Mermaid output
+- Produces final Markdown output (diagram, narrative, or both)
 - Handles regeneration
 
 ### Subagents
@@ -28,7 +31,8 @@ The system uses a single controller (**Flow Organizer**) and multiple focused su
 - Call Tracer → follows downstream call graph
 - Branch & Error Mapper → extracts conditionals, retries, error paths
 - External Service Enricher → labels Azure/APIs/DB/queues
-- Mermaid Formatter & Validator → builds and validates final diagram
+- Mermaid Formatter & Validator → builds and validates final diagram output
+- Flow Narrative Writer → builds structured, step-by-step narrative output
 
 All subagents include: `user-invocable: false`
 
@@ -52,6 +56,22 @@ Supports:
 
 ---
 
+#### output_mode
+
+    output_mode: diagram
+
+Options:
+- diagram
+- narrative
+- both
+
+Use:
+- `diagram` for visual-only output
+- `narrative` for prose walkthrough output
+- `both` for a single document that includes both sections
+
+---
+
 #### diagram_type
 
     diagram_type: auto
@@ -67,6 +87,8 @@ Use:
 - `sequence` for call order and request/response flow
 - `flowchart` for branching and decision-heavy flows
 - `context` for high-level service/system interaction
+
+Ignored when `output_mode: narrative`.
 
 ---
 
@@ -134,6 +156,26 @@ Use:
 - `on` when you want explicit nested call visibility
 - `off` when diagrams are getting visually busy
 
+Ignored when `output_mode: narrative`.
+
+---
+
+#### detail_level
+
+    detail_level: normal
+
+Options:
+- light
+- normal
+- deep
+
+Use:
+- `light` for concise overview
+- `normal` for balanced walkthrough
+- `deep` for major branches, retries, and error behavior
+
+Primarily used for narrative output.
+
 ---
 
 ## Visual Configuration
@@ -168,6 +210,32 @@ Use:
 - `short` for compact repeated participants like `KV`, `SQL`, `ADO`
 - `descriptive` for more readable, fuller names
 
+Ignored when `output_mode: narrative`.
+
+---
+
+## Narrative Configuration
+
+Example:
+
+    narrative_config:
+      include_why: true
+      include_branch_notes: true
+      include_external_dependencies: true
+      include_assumptions: true
+
+### include_why
+Controls whether the narrative explains why major steps likely exist, when supported by visible evidence.
+
+### include_branch_notes
+Controls whether meaningful alternate paths, retries, and error branches are described.
+
+### include_external_dependencies
+Controls whether important external systems are explicitly documented in the narrative.
+
+### include_assumptions
+Controls whether uncertainty and inferred intent are called out clearly.
+
 ---
 
 ## Regeneration
@@ -181,9 +249,15 @@ Example:
     <!--
     regenerate: flow-organizer
     entry_point: EmployeeSyncFunction.Run
+    output_mode: both
     diagram: sequence
+    detail_level: normal
     max_depth: 5
     include_external: true
+    include_why: true
+    include_branch_notes: true
+    include_external_dependencies: true
+    include_assumptions: true
     -->
 
 This allows the diagram to be refreshed later against updated code without rebuilding the prompt from scratch.
@@ -192,9 +266,10 @@ This allows the diagram to be refreshed later against updated code without rebui
 
 ## Example Configurations
 
-### Default
+### Default (diagram)
 
     entry_point: EmployeeSyncFunction.Run
+    output_mode: diagram
     diagram_type: auto
     max_depth: 5
     include_external: true
@@ -209,9 +284,52 @@ This allows the diagram to be refreshed later against updated code without rebui
       show_notes: true
       alias_mode: short
 
+### Narrative (walkthrough)
+
+    entry_point: EmployeeSyncFunction.Run
+    output_mode: narrative
+    detail_level: normal
+    max_depth: 5
+    include_external: true
+    show_branches: true
+    show_error_paths: true
+    regenerate: true
+
+    narrative_config:
+      include_why: true
+      include_branch_notes: true
+      include_external_dependencies: true
+      include_assumptions: true
+
+### Combined (diagram + narrative)
+
+    entry_point: EmployeeSyncFunction.Run
+    output_mode: both
+    diagram_type: sequence
+    detail_level: normal
+    max_depth: 6
+    include_external: true
+    show_branches: true
+    show_error_paths: true
+    collapse_minor_branches: true
+    show_activation_bars: auto
+    regenerate: true
+
+    visual_config:
+      mermaid_icons: emoji
+      show_notes: true
+      alias_mode: short
+
+    narrative_config:
+      include_why: true
+      include_branch_notes: true
+      include_external_dependencies: true
+      include_assumptions: true
+
 ### Minimal
 
     entry_point: getEmployeeById
+    output_mode: diagram
     diagram_type: sequence
     max_depth: 3
     include_external: false
@@ -225,7 +343,9 @@ This allows the diagram to be refreshed later against updated code without rebui
 ### Debug
 
     entry_point: src/services/syncService.ts:handleSync
+    output_mode: both
     diagram_type: auto
+    detail_level: deep
     max_depth: 6
     include_external: true
     show_branches: true
@@ -239,11 +359,17 @@ This allows the diagram to be refreshed later against updated code without rebui
       show_notes: true
       alias_mode: short
 
+    narrative_config:
+      include_why: true
+      include_branch_notes: true
+      include_external_dependencies: true
+      include_assumptions: true
+
 ---
 
 ## Example Prompts
 
-### Basic
+### Basic (diagram)
 
     Generate a call flow diagram for:
     src/hr/employee_sync.cs:42
@@ -262,9 +388,27 @@ This allows the diagram to be refreshed later against updated code without rebui
 
     Focus on retries and failures.
 
+### Narrative Path
+
+    Explain the flow as a narrative walkthrough for:
+    EmployeeSyncFunction.Run
+
+    Output mode: narrative
+    Detail level: normal
+    Include why, branches, and external dependency notes.
+
+### Combined Path
+
+    Generate both diagram and narrative for:
+    src/services/syncService.ts:handleSync
+
+    Output mode: both
+    Detail level: deep
+    Include retries and error paths.
+
 ### Regenerate
 
-    Regenerate the flow diagram from:
+    Regenerate the flow documentation from:
     docs/flows/hr-employee-sync-call-flow.md
 
 ---
@@ -273,7 +417,8 @@ This allows the diagram to be refreshed later against updated code without rebui
 
 The system produces:
 - a Markdown file
-- an embedded Mermaid diagram
+- an embedded Mermaid diagram when `output_mode` includes diagram
+- a structured walkthrough when `output_mode` includes narrative
 - regeneration metadata
 - validation notes or warnings when needed
 
@@ -294,18 +439,20 @@ The system produces:
 
 Use the Call Flow Agent System when you need to:
 - understand a complex logic path
-- document an API or Azure pipeline
+- document an API or Azure pipeline with diagrams
+- document a flow as prose for handoff or onboarding
 - debug unexpected behavior
 - visualize service interactions
-- help onboard another developer
+- generate both visual and written artifacts in one run
 
 ---
 
 ## Summary
 
-The Call Flow Agent System provides a structured, repeatable way to turn code into clear visual execution flows.
+The Call Flow Agent System provides a structured, repeatable way to turn code into clear execution documentation.
 
 It helps bridge:
 - code → understanding
 - logic → visualization
+- logic → narrative explanation
 - debugging → documentation
